@@ -932,3 +932,4 @@ public class Scheduler {
             program.highestPenaltyRatioNext(false);
         }
     }
+}
