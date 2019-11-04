@@ -1,6 +1,7 @@
 import java.util.LinkedList;
 import java.util.ArrayList;
 
+// this class represents a task which keeps track of a bunch of different factors related to the task. the attirbutes of the class are self explanatory
 public class Task {
 
     LinkedList<Instruction> sequence;

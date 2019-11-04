@@ -1,3 +1,4 @@
+// this is a simple class to just keep all of the components of an instruction together.
 public class Instruction {
 
     private String instruction;
