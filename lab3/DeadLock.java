@@ -9,15 +9,18 @@ public class DeadLock {
     ArrayList<Task> untouched;
     ArrayList<Integer> remaining;
     ArrayList<ArrayList<Integer>> claimMatrix;
-    private StringBuilder fifo = new StringBuilder();
-    private StringBuilder bankers = new StringBuilder();
+    StringBuilder bankers = new StringBuilder();
+    ArrayList<String> fifoOutput = new ArrayList<>();
+    ArrayList<String> bankersOutput = new ArrayList<>();
     String fileName;
+    int iteration;
 
     public DeadLock(String fileName) {
         this.fileName = fileName;
         this.tasks = initializeInstructions(fileName);
         this.untouched = new ArrayList<>();
         this.untouched.addAll(this.tasks);
+        this.iteration = 0;
     }
 
     private ArrayList<Task> initializeInstructions(String fileName) {
@@ -79,6 +82,8 @@ public class DeadLock {
             return true;
         }
         else {
+            this.bankers.append(String.format("During cycle %d-%d of Banker's algorithms\n", iteration, iteration+1));
+            this.bankers.append(String.format("\tTask %d's request exceeds its claim; aborted; %d units available next cycle\n", task.taskId, task.amountOfEachResource.get(task.getNextInstruction().getResource()-1)));
             toBeRemovedFromSystem.add(task);
             task.setAborted(true);
             return false;
@@ -97,23 +102,48 @@ public class DeadLock {
     private void printSummary(String name) {
         int totalTimeInSystem = 0;
         int totalTimeBlocked = 0;
+
         if (name.equals("fifo")) {
-            System.out.println(String.format("%20s", "FIFO"));
+            this.fifoOutput.add((String.format("%20s", "FIFO")));
         }
         else {
-            System.out.println(String.format("%20s", "BANKERS"));
+            this.bankersOutput.add((String.format("%30s", "BANKERS")));
         }
-        for (Task task: this.untouched) {
-            if (task.aborted) {
-                System.out.println(String.format("task%s      aborted", task.taskId));
+        if (name.equals("fifo")) {
+            for (Task task: this.untouched) {
+                if (task.aborted) {
+                    this.fifoOutput.add(String.format("task%s      %2$-15s", task.taskId, "aborted"));
+                }
+                else {
+                    this.fifoOutput.add(String.format("task%s %6d %6d %6.0f%%", task.taskId, task.timeInSystem, task.timeBlocked, ((((double)task.timeBlocked) / task.timeInSystem)*100)));
+                    totalTimeInSystem += task.timeInSystem;
+                    totalTimeBlocked += task.timeBlocked;
+                }
             }
-            else {
-                System.out.println(String.format("task%s %6d %6d %6.0f%%", task.taskId, task.timeInSystem, task.timeBlocked, ((((double)task.timeBlocked) / task.timeInSystem)*100)));
-                totalTimeInSystem += task.timeInSystem;
-                totalTimeBlocked += task.timeBlocked;
-            }
+            this.fifoOutput.add(String.format("total %6d %6d %6.0f%%", totalTimeInSystem, totalTimeBlocked, ((((double)totalTimeBlocked) / totalTimeInSystem)*100)));
         }
-        System.out.println(String.format("total %6d %6d %6.0f%%", totalTimeInSystem, totalTimeBlocked, ((((double)totalTimeBlocked) / totalTimeInSystem)*100)));
+        else {
+            for (Task task: this.untouched) {
+                if (task.aborted) {
+                    this.bankersOutput.add(String.format("%10s%s      aborted", "task", task.taskId));
+                }
+                else {
+                    this.bankersOutput.add(String.format("%9s%s %6d %6d %6.0f%%", "task", task.taskId, task.timeInSystem, task.timeBlocked, ((((double)task.timeBlocked) / task.timeInSystem)*100)));
+                    totalTimeInSystem += task.timeInSystem;
+                    totalTimeBlocked += task.timeBlocked;
+                }
+            }
+            this.bankersOutput.add(String.format("%10s %6d %6d %6.0f%%", "total", totalTimeInSystem, totalTimeBlocked, ((((double)totalTimeBlocked) / totalTimeInSystem)*100)));
+        }
+    }
+
+    void printOutput() {
+        System.out.println(this.bankers.toString());
+        for (int i = 0; i < this.fifoOutput.size(); i++) {
+            System.out.print(this.fifoOutput.get(i));
+            System.out.print(this.bankersOutput.get(i));
+            System.out.println();
+        }
     }
 
     private void checkBlocked(LinkedList<Task> blocked, ArrayList<Task> toBeRemovedFromBlocked, ArrayList<Task> toBeRemovedFromSystem) {
@@ -268,6 +298,7 @@ public class DeadLock {
                     moveToBlocked(blocked, toBeMovedToBlocked);
                     removeFromSystem(blocked, toBeRemovedFromSystem, resourcesToBeAddedBack);
                     addNewlyAquiredRescources(resourcesToBeAddedBack);
+                    iteration++;
                 }
                 else {
                     if (blocked.size() == 0) {
@@ -285,6 +316,7 @@ public class DeadLock {
                         }
                         this.tasks.get(0).timeInSystem++;
                         blocked.add(this.tasks.get(0));
+                        iteration++;
                     }
                     else {
                         toBeMovedToBlocked.add(this.tasks.get(0));
@@ -305,6 +337,7 @@ public class DeadLock {
                                 blocked.remove(smallestId);
                             }
                         }
+                        iteration++;
                     }
                 }
             }
@@ -319,6 +352,7 @@ public class DeadLock {
         this.tasks = initializeInstructions(this.fileName);
         this.untouched = new ArrayList<>();
         this.untouched.addAll(this.tasks);
+        this.iteration = 0;
     }
 
     public void bankers() {
@@ -355,6 +389,8 @@ public class DeadLock {
                             isSafe.add(true);
                         }
                         else {
+                            this.bankers.append(String.format("Banker aborts task %d before run begins:\n", task.taskId));
+                            this.bankers.append(String.format("\tclaim for resourse %d (%d) exceeds number of units present (%d)\n", task.getNextInstruction().getResource(), task.getNextInstruction().getClaim(), this.remaining.get(instruction.getResource()-1)));
                             toBeRemovedFromSystem.add(task);
                             task.setAborted(true);
                             isSafe.add(true);
@@ -422,6 +458,7 @@ public class DeadLock {
                     moveToBlocked(blocked, toBeMovedToBlocked);
                     removeFromSystem(blocked, toBeRemovedFromSystem, resourcesToBeAddedBack);
                     addNewlyAquiredRescources(resourcesToBeAddedBack);
+                    iteration++;
                 }
                 else {
                     if (blocked.size() == 0) {
@@ -439,6 +476,7 @@ public class DeadLock {
                         }
                         this.tasks.get(0).timeInSystem++;
                         blocked.add(this.tasks.get(0));
+                        iteration++;
                     }
                     else {
                         toBeMovedToBlocked.add(this.tasks.get(0));
@@ -459,6 +497,7 @@ public class DeadLock {
                                 blocked.remove(smallestId);
                             }
                         }
+                        iteration++;
                     }
                 }
             }
@@ -480,5 +519,6 @@ public class DeadLock {
         DeadLock algo = new DeadLock(args[0]);
         algo.fifo();
         algo.bankers();
+        algo.printOutput();
     }
 }
