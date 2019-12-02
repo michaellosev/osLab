@@ -1,4 +1,4 @@
-package lab4;
+
 
 public class Page {
     int process;
